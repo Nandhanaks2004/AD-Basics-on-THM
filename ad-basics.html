@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AD Basics — TryHackMe Room Walkthrough</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0b0f14;--bg2:#111827;--card:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);
+--primary:#10b981;--secondary:#06b6d4;--purple:#8b5cf6;--warning:#f59e0b;--danger:#ef4444;
+--heading:#f8fafc;--body:#cbd5e1;--sidebar-w:280px;
+--font-heading:'Space Grotesk',sans-serif;--font-body:'Inter',sans-serif;
+}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--primary) var(--bg2)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--primary);border-radius:3px}
+body{font-family:var(--font-body);background:var(--bg);color:var(--body);line-height:1.7;overflow-x:hidden}
+h1,h2,h3,h4,h5,h6{font-family:var(--font-heading);color:var(--heading);font-weight:600;line-height:1.3}
+a{color:var(--primary);text-decoration:none;transition:all .3s}
+a:hover{color:var(--secondary)}
+
+/* Sidebar */
+.sidebar{position:fixed;left:0;top:0;width:var(--sidebar-w);height:100vh;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transition:transform .3s ease}
+.sidebar-header{padding:24px 20px;border-bottom:1px solid var(--border)}
+.sidebar-header .logo{font-family:var(--font-heading);font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:8px}
+.sidebar-header .logo span{color:var(--heading)}
+.sidebar-header .sub{font-size:11px;color:var(--body);opacity:.6;margin-top:4px}
+.sidebar-nav{padding:12px 0}
+.nav-section{padding:8px 20px 4px;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--body);opacity:.4;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;color:var(--body);cursor:pointer;transition:all .2s;border-left:3px solid transparent;position:relative}
+.nav-item:hover{background:rgba(255,255,255,0.03);color:var(--heading);border-left-color:var(--primary)}
+.nav-item.active{color:var(--primary);background:rgba(16,185,129,0.08);border-left-color:var(--primary)}
+.nav-item.active::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--primary);border-radius:3px 0 0 3px}
+.nav-item .num{font-size:10px;font-weight:700;opacity:.5;min-width:20px}
+.nav-item .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-toggle{display:none;position:fixed;top:16px;left:16px;z-index:200;background:var(--bg2);border:1px solid var(--border);color:var(--heading);width:40px;height:40px;border-radius:8px;cursor:pointer;font-size:18px;align-items:center;justify-content:center}
+
+/* Main */
+.main{margin-left:var(--sidebar-w);min-height:100vh}
+
+/* Hero */
+.hero{position:relative;padding:80px 60px 60px;overflow:hidden;border-bottom:1px solid var(--border)}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 30% 50%,rgba(16,185,129,0.08) 0%,transparent 60%),radial-gradient(ellipse at 70% 30%,rgba(139,92,246,0.06) 0%,transparent 50%);pointer-events:none}
+.hero-content{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;max-width:1200px}
+.hero-left .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--primary);margin-bottom:20px}
+.hero-left h1{font-size:42px;font-weight:700;margin-bottom:12px;background:linear-gradient(135deg,var(--heading) 0%,var(--primary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-left .subtitle{font-size:16px;color:var(--body);opacity:.8;margin-bottom:24px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.meta-tag{padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--body)}
+.meta-tag.diff{border-color:rgba(16,185,129,0.3);color:var(--primary)}
+.hero-flow{display:flex;flex-direction:column;gap:8px;margin-top:24px}
+.flow-step{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:13px;transition:all .3s}
+.flow-step:hover{border-color:var(--primary);transform:translateX(4px)}
+.flow-step .arrow{color:var(--primary);font-weight:700}
+.flow-step .icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.flow-step:nth-child(1) .icon{background:rgba(239,68,68,0.15);color:var(--danger)}
+.flow-step:nth-child(2) .icon{background:rgba(6,182,212,0.15);color:var(--secondary)}
+.flow-step:nth-child(3) .icon{background:rgba(139,92,246,0.15);color:var(--purple)}
+.flow-step:nth-child(4) .icon{background:rgba(16,185,129,0.15);color:var(--primary)}
+.flow-step:nth-child(5) .icon{background:rgba(245,158,11,0.15);color:var(--warning)}
+
+/* Hero Right - Visualization */
+.hero-vis{position:relative;height:400px}
+.vis-node{position:absolute;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;color:var(--heading);text-align:center;transition:all .4s;backdrop-filter:blur(10px)}
+.vis-node:hover{transform:scale(1.05);border-color:var(--primary);box-shadow:0 0 20px rgba(16,185,129,0.2)}
+.vis-node.dc{left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);padding:18px 24px;font-size:14px}
+.vis-node.dc:hover{transform:translate(-50%,-50%) scale(1.05)}
+.vis-node.kali{left:10%;top:15%}
+.vis-node.rdp{left:10%;top:55%}
+.vis-node.users{right:10%;top:15%}
+.vis-node.groups{right:10%;top:55%}
+.vis-node.gpo{left:50%;bottom:5%;transform:translateX(-50%)}
+.vis-line{position:absolute;background:linear-gradient(90deg,var(--primary),var(--secondary));height:2px;opacity:.3;animation:pulse-line 2s ease-in-out infinite}
+@keyframes pulse-line{0%,100%{opacity:.2}50%{opacity:.6}}
+.vis-line.l1{left:22%;top:28%;width:15%;transform:rotate(15deg)}
+.vis-line.l2{left:22%;top:68%;width:15%;transform:rotate(-15deg)}
+.vis-line.l3{right:22%;top:28%;width:15%;transform:rotate(-15deg)}
+.vis-line.l4{right:22%;top:68%;width:15%;transform:rotate(15deg)}
+.vis-line.l5{left:50%;top:72%;width:2px;height:15%;transform:translateX(-50%)}
+
+/* Sections */
+.section{padding:60px;max-width:1200px;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+.section-label{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:20px;font-size:11px;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.section h2{font-size:32px;margin-bottom:8px}
+.section .desc{font-size:15px;color:var(--body);opacity:.7;margin-bottom:32px;max-width:700px}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;transition:all .3s}
+.card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px)}
+.card-grid{display:grid;gap:20px}
+.card-grid.cols-2{grid-template-columns:repeat(2,1fr)}
+.card-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.card-grid.cols-4{grid-template-columns:repeat(4,1fr)}
+.card h3{font-size:16px;margin-bottom:8px}
+.card p{font-size:13px;opacity:.7}
+.card .icon-lg{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
+.card .icon-lg.green{background:rgba(16,185,129,0.12);color:var(--primary)}
+.card .icon-lg.blue{background:rgba(6,182,212,0.12);color:var(--secondary)}
+.card .icon-lg.purple{background:rgba(139,92,246,0.12);color:var(--purple)}
+.card .icon-lg.yellow{background:rgba(245,158,11,0.12);color:var(--warning)}
+.card .icon-lg.red{background:rgba(239,68,68,0.12);color:var(--danger)}
+
+/* Info Box */
+.info-box{padding:20px 24px;border-radius:10px;margin:20px 0;font-size:14px;line-height:1.8}
+.info-box.green{background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-left:3px solid var(--primary)}
+.info-box.blue{background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.15);border-left:3px solid var(--secondary)}
+.info-box.purple{background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-left:3px solid var(--purple)}
+.info-box.yellow{background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-left:3px solid var(--warning)}
+.info-box.red{background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-left:3px solid var(--danger)}
+.info-box strong{color:var(--heading)}
+
+/* Terminal */
+.terminal{background:#0d1117;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:20px 0}
+.terminal-header{display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border)}
+.terminal-dot{width:10px;height:10px;border-radius:50%}
+.terminal-dot.r{background:#ff5f57}.terminal-dot.y{background:#febc2e}.terminal-dot.g{background:#28c840}
+.terminal-header span{margin-left:8px;font-size:12px;color:var(--body);opacity:.5}
+.terminal-body{padding:16px;font-family:'Courier New',monospace;font-size:13px;color:var(--primary)}
+.terminal-body .prompt{color:var(--purple)}
+.terminal-body .cmd{color:var(--heading)}
+.terminal-body .output{color:var(--body);opacity:.6;margin-top:4px}
+.terminal-body .line{margin-bottom:8px}
+
+/* Comparison Table */
+.table-wrap{overflow-x:auto;margin:20px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:12px 16px;text-align:left;background:rgba(255,255,255,0.03);border-bottom:2px solid var(--border);color:var(--heading);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:12px 16px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,0.02)}
+
+/* Diagram */
+.diagram{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px;margin:24px 0;position:relative;overflow:hidden}
+.diagram::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--primary),transparent)}
+.diagram-title{font-size:14px;font-weight:600;color:var(--heading);margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.diagram-title .dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.tree{font-family:'Courier New',monospace;font-size:13px;line-height:2;color:var(--body)}
+.tree .root{color:var(--primary);font-weight:600}
+.tree .branch{color:var(--secondary)}
+.tree .leaf{color:var(--body);opacity:.7}
+
+/* Flow Diagram */
+.flow-diagram{display:flex;flex-direction:column;align-items:center;gap:0;margin:24px 0}
+.flow-node{padding:14px 28px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--heading);text-align:center;transition:all .3s;min-width:180px}
+.flow-node:hover{border-color:var(--primary);box-shadow:0 0 15px rgba(16,185,129,0.15)}
+.flow-node.highlight{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:var(--primary)}
+.flow-arrow{color:var(--primary);font-size:18px;padding:4px 0;opacity:.6}
+
+/* Horizontal Flow */
+.h-flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:24px 0}
+.h-flow .flow-node{min-width:auto}
+.h-flow .flow-arrow{transform:rotate(-90deg)}
+
+/* Accordion */
+.accordion{margin:20px 0}
+.accordion-item{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.accordion-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;font-size:14px;font-weight:600;color:var(--heading);background:var(--card);transition:all .2s}
+.accordion-header:hover{background:rgba(255,255,255,0.06)}
+.accordion-header .chevron{transition:transform .3s;color:var(--primary)}
+.accordion-item.open .accordion-header .chevron{transform:rotate(180deg)}
+.accordion-body{max-height:0;overflow:hidden;transition:max-height .4s ease;padding:0 20px}
+.accordion-item.open .accordion-body{max-height:800px;padding:16px 20px}
+
+/* Quiz */
+.quiz-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;transition:all .3s}
+.quiz-card .q-num{font-size:11px;color:var(--primary);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.quiz-card .question{font-size:15px;color:var(--heading);font-weight:600;margin-bottom:16px}
+.quiz-options{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.quiz-opt{padding:12px 16px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:all .2s}
+.quiz-opt:hover{border-color:var(--primary);background:rgba(16,185,129,0.05)}
+.quiz-opt.selected{border-color:var(--primary);background:rgba(16,185,129,0.1);color:var(--primary)}
+.quiz-opt.correct{border-color:var(--primary);background:rgba(16,185,129,0.15);color:var(--primary)}
+.quiz-opt.wrong{border-color:var(--danger);background:rgba(239,68,68,0.1);color:var(--danger)}
+.quiz-answer{display:none;padding:12px 16px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:8px;font-size:13px;color:var(--primary)}
+.quiz-answer.show{display:block}
+.quiz-btn{padding:10px 20px;background:var(--primary);color:var(--bg);border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.quiz-btn:hover{background:#059669;transform:translateY(-1px)}
+
+/* Screenshot Placeholder */
+.screenshot{background:linear-gradient(135deg,rgba(255,255,255,0.02),rgba(255,255,255,0.05));border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;margin:20px 0;position:relative;overflow:hidden}
+.screenshot::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(255,255,255,0.01) 20px,rgba(255,255,255,0.01) 21px)}
+.screenshot .icon{font-size:32px;margin-bottom:8px;opacity:.4}
+.screenshot .label{font-size:13px;color:var(--body);opacity:.5}
+
+/* Step Card */
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;position:relative}
+.step-card::before{content:attr(data-step);position:absolute;top:-10px;left:20px;padding:4px 12px;background:var(--primary);color:var(--bg);font-size:11px;font-weight:700;border-radius:4px}
+.step-card h4{margin-top:8px;margin-bottom:8px;font-size:16px}
+.step-card p{font-size:13px;opacity:.7}
+
+/* Progress Bar */
+.progress-bar{position:fixed;top:0;left:var(--sidebar-w);right:0;height:3px;z-index:50;background:var(--bg2)}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));width:0%;transition:width .1s}
+
+/* Object Cards */
+.obj-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.obj-card:hover{border-color:var(--primary);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.3)}
+.obj-card .obj-icon{font-size:24px;margin-bottom:10px}
+.obj-card h4{font-size:14px;margin-bottom:6px}
+.obj-card p{font-size:12px;opacity:.6}
+.obj-card .obj-detail{max-height:0;overflow:hidden;transition:max-height .4s ease;font-size:12px;color:var(--body);opacity:.8;margin-top:0}
+.obj-card.expanded .obj-detail{max-height:200px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+/* Trust Visual */
+.trust-vis{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0}
+.trust-domain{padding:20px 32px;background:var(--card);border:1px solid var(--border);border-radius:10px;text-align:center}
+.trust-domain h4{font-size:14px;color:var(--heading);margin-bottom:4px}
+.trust-domain p{font-size:12px;opacity:.6}
+.trust-arrow{display:flex;flex-direction:column;align-items:center;gap:4px}
+.trust-arrow .line{width:60px;height:2px;background:var(--primary);position:relative}
+.trust-arrow .label{font-size:11px;color:var(--primary);font-weight:600}
+
+/* Responsive */
+@media(max-width:1024px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.sidebar-toggle{display:flex}
+.main{margin-left:0}
+.progress-bar{left:0}
+.hero-content{grid-template-columns:1fr}
+.hero-vis{height:300px}
+.card-grid.cols-3,.card-grid.cols-4{grid-template-columns:repeat(2,1fr)}
+.section{padding:40px 24px}
+.hero{padding:60px 24px 40px}
+}
+@media(max-width:640px){
+.card-grid.cols-2,.card-grid.cols-3,.card-grid.cols-4{grid-template-columns:1fr}
+.hero-left h1{font-size:28px}
+.section h2{font-size:24px}
+.trust-vis{flex-direction:column}
+.h-flow{flex-direction:column}
+.flow-node{min-width:100%}
+}
+
+/* Animations */
+@keyframes fade-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 5px rgba(16,185,129,0.2)}50%{box-shadow:0 0 20px rgba(16,185,129,0.4)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.animate-in{animation:fade-in .6s ease forwards}
+.glow{animation:glow 2s ease-in-out infinite}
+.float{animation:float 3s ease-in-out infinite}
+
+/* Tab System */
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{padding:10px 20px;font-size:13px;font-weight:600;color:var(--body);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--heading)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Badge */
+.badge-sm{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-sm.green{background:rgba(16,185,129,0.15);color:var(--primary)}
+.badge-sm.blue{background:rgba(6,182,212,0.15);color:var(--secondary)}
+.badge-sm.purple{background:rgba(139,92,246,0.15);color:var(--purple)}
+.badge-sm.yellow{background:rgba(245,158,11,0.15);color:var(--warning)}
+
+/* Key Concept */
+.key-concept{display:flex;gap:16px;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin:16px 0}
+.key-concept .kc-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.key-concept .kc-content h4{font-size:14px;margin-bottom:4px}
+.key-concept .kc-content p{font-size:13px;opacity:.7}
+
+/* Checklist */
+.checklist{list-style:none;padding:0}
+.checklist li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:13px}
+.checklist li::before{content:'✓';color:var(--primary);font-weight:700;flex-shrink:0}
+
+/* Final Recap Flow */
+.recap-flow{display:flex;flex-direction:column;align-items:center;gap:0;margin:32px 0}
+.recap-node{padding:16px 32px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;color:var(--heading);text-align:center;transition:all .3s}
+.recap-node:hover{border-color:var(--primary);box-shadow:0 0 20px rgba(16,185,129,0.15)}
+.recap-arrow{color:var(--primary);font-size:20px;padding:6px 0}
+
+/* Score Display */
+.score-display{text-align:center;padding:32px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin:24px 0}
+.score-display .score{font-size:48px;font-weight:700;color:var(--primary)}
+.score-display .score-label{font-size:14px;color:var(--body);opacity:.7;margin-top:4px}
+</style>
+</head>
+<body>
+
+<button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-header">
+<div class="logo">🛡️ <span>AD Basics</span></div>
+<div class="sub">TryHackMe Room Walkthrough</div>
+</div>
+<nav class="sidebar-nav">
+<div class="nav-section">Environment</div>
+<div class="nav-item active" data-target="hero"><span class="num">00</span><span class="label">Overview</span></div>
+<div class="nav-item" data-target="lab"><span class="num">01</span><span class="label">Lab Environment</span></div>
+<div class="nav-item" data-target="rdp"><span class="num">02</span><span class="label">RDP & Remote Access</span></div>
+<div class="nav-section">Core Concepts</div>
+<div class="nav-item" data-target="domain"><span class="num">03</span><span class="label">Windows Domains</span></div>
+<div class="nav-item" data-target="ad"><span class="num">04</span><span class="label">Active Directory</span></div>
+<div class="nav-item" data-target="dc"><span class="num">05</span><span class="label">Domain Controllers</span></div>
+<div class="nav-item" data-target="objects"><span class="num">06</span><span class="label">AD Objects</span></div>
+<div class="nav-item" data-target="users-groups"><span class="num">07</span><span class="label">Users & Groups</span></div>
+<div class="nav-item" data-target="ous"><span class="num">08</span><span class="label">Organizational Units</span></div>
+<div class="nav-item" data-target="aduc"><span class="num">09</span><span class="label">ADUC Exploration</span></div>
+<div class="nav-section">Administration</div>
+<div class="nav-item" data-target="delegation"><span class="num">10</span><span class="label">Delegation</span></div>
+<div class="nav-item" data-target="computers"><span class="num">11</span><span class="label">Computer Objects</span></div>
+<div class="nav-item" data-target="ws-servers"><span class="num">12</span><span class="label">Workstations vs Servers</span></div>
+<div class="nav-item" data-target="gpo"><span class="num">13</span><span class="label">Group Policy Basics</span></div>
+<div class="nav-item" data-target="sysvol"><span class="num">14</span><span class="label">SYSVOL Share</span></div>
+<div class="nav-section">Authentication</div>
+<div class="nav-item" data-target="kerberos"><span class="num">15</span><span class="label">Kerberos Auth</span></div>
+<div class="nav-item" data-target="netntlm"><span class="num">16</span><span class="label">NetNTLM Auth</span></div>
+<div class="nav-section">Enterprise Scale</div>
+<div class="nav-item" data-target="trees"><span class="num">17</span><span class="label">Trees & Forests</span></div>
+<div class="nav-item" data-target="trusts"><span class="num">18</span><span class="label">Trust Relationships</span></div>
+<div class="nav-item" data-target="architecture"><span class="num">19</span><span class="label">AD Architecture</span></div>
+<div class="nav-section">Practice</div>
+<div class="nav-item" data-target="walkthrough"><span class="num">20</span><span class="label">Lab Walkthrough</span></div>
+<div class="nav-item" data-target="assessment"><span class="num">21</span><span class="label">Assessment</span></div>
+<div class="nav-item" data-target="recap"><span class="num">22</span><span class="label">Final Recap</span></div>
+</nav>
+</aside>
+
+<main class="main">
+
+<!-- HERO -->
+<section class="hero" id="hero">
+<div class="hero-content">
+<div class="hero-left">
+<div class="badge">🎯 TryHackMe Room</div>
+<h1>Active Directory Basics</h1>
+<p class="subtitle">Enterprise Identity Management & Windows Domain Foundations</p>
+<div class="hero-meta">
+<span class="meta-tag diff">Beginner</span>
+<span class="meta-tag">Active Directory</span>
+<span class="meta-tag">Windows Domain</span>
+<span class="meta-tag">Kerberos</span>
+<span class="meta-tag">GPO</span>
+</div>
+<div class="hero-flow">
+<div class="flow-step"><div class="icon">🖥️</div><span class="arrow">→</span> Kali Linux Workstation</div>
+<div class="flow-step"><div class="icon">🔗</div><span class="arrow">→</span> RDP Connection (Remmina)</div>
+<div class="flow-step"><div class="icon">🏢</div><span class="arrow">→</span> Domain Controller (THM.local)</div>
+<div class="flow-step"><div class="icon">📋</div><span class="arrow">→</span> Active Directory Services</div>
+<div class="flow-step"><div class="icon">🔐</div><span class="arrow">→</span> Enterprise Authentication</div>
+</div>
+</div>
+<div class="hero-vis">
+<div class="vis-node kali">🖥️ Kali Linux</div>
+<div class="vis-node rdp">🔗 RDP</div>
+<div class="vis-node dc glow">🏢 Domain Controller</div>
+<div class="vis-node users">👥 Users</div>
+<div class="vis-node groups">👤 Groups</div>
+<div class="vis-node gpo">📜 GPO</div>
+<div class="vis-line l1"></div>
+<div class="vis-line l2"></div>
+<div class="vis-line l3"></div>
+<div class="vis-line l4"></div>
+<div class="vis-line l5"></div>
+</div>
+</div>
+</section>
+
+<!-- 01 LAB ENVIRONMENT -->
+<section class="section" id="lab">
+<div class="section-label">Phase 0</div>
+<h2>Lab Environment</h2>
+<p class="desc">Understanding the TryHackMe Active Directory lab infrastructure and what makes it a realistic enterprise simulation.</p>
+
+<div class="info-box green">
+<strong>Key Concept:</strong> The THM AD lab provides a pre-configured virtual enterprise network — a Domain Controller with Active Directory services, pre-created users, groups, and OUs, all running under the <strong>THM.local</strong> domain.
+</div>
+
+<div class="card-grid cols-3">
+<div class="card">
+<div class="icon-lg green">🏢</div>
+<h3>Domain Controller</h3>
+<p>Pre-configured server running Active Directory Domain Services (AD DS) for the THM.local domain.</p>
+</div>
+<div class="card">
+<div class="icon-lg blue">👥</div>
+<h3>Pre-Created Objects</h3>
+<p>Users, groups, service accounts, and computer objects already exist in the directory.</p>
+</div>
+<div class="card">
+<div class="icon-lg purple">🌐</div>
+<h3>Simulated Enterprise</h3>
+<p>Department-based OUs (IT, Marketing, Sales, Management) mirror real corporate structure.</p>
+</div>
+</div>
+
+<div class="diagram">
+<div class="diagram-title"><span class="dot"></span> THM Enterprise Environment</div>
+<div class="tree">
+<span class="root">THM.local</span><br>
+├── <span class="branch">Domain Controller</span><br>
+├── <span class="branch">Users</span> (Administrator, Domain Users, etc.)<br>
+├── <span class="branch">OUs</span><br>
+│ &nbsp;&nbsp; ├── IT<br>
+│ &nbsp;&nbsp; ├── Marketing<br>
+│ &nbsp;&nbsp; ├── Sales<br>
+│ &nbsp;&nbsp; └── Management<br>
+├── <span class="branch">Groups</span> (Domain Admins, Domain Users, etc.)<br>
+└── <span class="branch">Domain Machines</span> (Workstations & Servers)
+</div>
+</div>
+
+<div class="info-box blue">
+<strong>Important:</strong> This lab simulates a real enterprise Windows domain. You are not opening a simple VM locally — you are connecting to a remote enterprise server that controls identity and authentication for the entire domain.
+</div>
+</section>
+
+<!-- 02 RDP -->
+<section class="section" id="rdp">
+<div class="section-label">Phase 0 — Practical</div>
+<h2>RDP & Remote Access</h2>
+<p class="desc">How administrators remotely manage Windows servers using Remote Desktop Protocol (RDP) from their Kali workstation.</p>
+
+<div class="flow-diagram">
+<div class="flow-node">🖥️ Kali Linux</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">📡 Remmina Client</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">🔗 RDP Protocol</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">🏢 Domain Controller</div>
+</div>
+
+<div class="info-box green">
+<strong>What is RDP?</strong> Remote Desktop Protocol allows full GUI control of a remote Windows machine over the network. In enterprises, administrators never access Domain Controllers physically — they use RDP from their admin workstations.
+</div>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>Connection Details</h3>
+<p style="margin-top:8px"><strong style="color:var(--heading)">Username:</strong> Administrator<br><strong style="color:var(--heading)">Password:</strong> Password321<br><strong style="color:var(--heading)">Domain:</strong> THM.local</p>
+</div>
+<div class="card">
+<h3>Why RDP Matters</h3>
+<p style="margin-top:8px">Simulates real enterprise administration workflow. Domain Controllers are in secure server rooms — admins manage them remotely via RDP.</p>
+</div>
+</div>
+
+<div class="terminal">
+<div class="terminal-header">
+<div class="terminal-dot r"></div><div class="terminal-dot y"></div><div class="terminal-dot g"></div>
+<span>Kali Terminal</span>
+</div>
+<div class="terminal-body">
+<div class="line"><span class="prompt">kali@kali:~$ </span><span class="cmd">remmina</span></div>
+<div class="line"><span class="output"># Opens Remmina Remote Desktop Client</span></div>
+<div class="line"><span class="output"># Configure RDP profile with THM lab IP</span></div>
+<div class="line"><span class="output"># Connect to Domain Controller</span></div>
+</div>
+</div>
+
+<div class="accordion">
+<div class="accordion-item">
+<div class="accordion-header" onclick="toggleAccordion(this)">Step 1: Open Remmina in Kali <span class="chevron">▼</span></div>
+<div class="accordion-body"><p>Open Remmina from Applications → Internet → Remmina Remote Desktop Client, or run <code>remmina</code> in terminal. Remmina is the Linux equivalent of Windows Remote Desktop Connection.</p></div>
+</div>
+<div class="accordion-item">
+<div class="accordion-header" onclick="toggleAccordion(this)">Step 2: Create RDP Profile <span class="chevron">▼</span></div>
+<div class="accordion-body"><p>Click "+" to create a new profile. Set Protocol to RDP, Server to the THM machine IP, Username to Administrator, Password to Password321, and Domain to THM.</p></div>
+</div>
+<div class="accordion-item">
+<div class="accordion-header" onclick="toggleAccordion(this)">Step 3: Connect & Accept Certificate <span class="chevron">▼</span></div>
+<div class="accordion-body"><p>Click Connect. If prompted about certificate warnings, accept them. This establishes a remote session with the Domain Controller.</p></div>
+</div>
+<div class="accordion-item">
+<div class="accordion-header" onclick="toggleAccordion(this)">Step 4: Successful Login <span class="chevron">▼</span></div>
+<div class="accordion-body"><p>After login, you'll see the Windows desktop of the remote machine. You now have administrative privileges over the THM.local domain.</p></div>
+</div>
+</div>
+
+<div class="screenshot">
+<div class="icon">🖼️</div>
+<div class="label">Screenshot: Remmina RDP Connection to Domain Controller</div>
+</div>
+</section>
+
+<!-- 03 WINDOWS DOMAIN -->
+<section class="section" id="domain">
+<div class="section-label">Phase 1</div>
+<h2>Windows Domains</h2>
+<p class="desc">Understanding why centralized identity management exists and how Windows Domains solve the problems of decentralized user management.</p>
+
+<div class="card-grid cols-2">
+<div class="card" style="border-color:rgba(239,68,68,0.2)">
+<div class="icon-lg red">💻</div>
+<h3>Workgroup Model</h3>
+<p>Each PC manages users locally. Same user must be created on every machine. Password changes must be updated everywhere. High admin overhead, security gaps, poor scalability.</p>
+</div>
+<div class="card" style="border-color:rgba(16,185,129,0.2)">
+<div class="icon-lg green">🏢</div>
+<h3>Domain Model</h3>
+<p>One central system manages all users and access. Single sign-on across all machines. Centralized policy enforcement. Scalable to thousands of users and computers.</p>
+</div>
+</div>
+
+<div class="diagram">
+<div class="diagram-title"><span class="dot"></span> Workgroup vs Domain</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+<div>
+<div style="text-align:center;margin-bottom:12px;font-weight:600;color:var(--danger);font-size:13px">WORKGROUP (Decentralized)</div>
+<div class="tree">
+<span class="leaf">PC1 → Local Users</span><br>
+<span class="leaf">PC2 → Local Users</span><br>
+<span class="leaf">PC3 → Local Users</span>
+</div>
+</div>
+<div>
+<div style="text-align:center;margin-bottom:12px;font-weight:600;color:var(--primary);font-size:13px">DOMAIN (Centralized)</div>
+<div class="tree">
+<span class="leaf">Client Machines</span><br>
+<span class="branch">&nbsp;&nbsp;&nbsp;&nbsp;↓</span><br>
+<span class="root">Domain Controller</span><br>
+<span class="branch">&nbsp;&nbsp;&nbsp;&nbsp;↓</span><br>
+<span class="leaf">Centralized Authentication</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="info-box green">
+<strong>Key Insight:</strong> A Windows Domain = centralized control boundary for an enterprise network. Instead of managing 500 users across 200 computers individually, one central directory handles everything.
+</div>
+</section>
+
+<!-- 04 ACTIVE DIRECTORY -->
+<section class="section" id="ad">
+<div class="section-label">Phase 1 — Core</div>
+<h2>Active Directory</h2>
+<p class="desc">Active Directory is the central identity database of the enterprise — the single source of truth for all users, computers, groups, and policies.</p>
+
+<div class="info-box purple">
+<strong>AD DS:</strong> Active Directory Domain Services is the core service that holds information about all objects in the network. This is the answer to the THM question: "The core service holding information about objects in the network is called?"
+</div>
+
+<div class="diagram">
+<div class="diagram-title"><span class="dot"></span> Active Directory Database</div>
+<div class="tree">
+<span class="root">Active Directory</span><br>
+├── <span class="branch">👤 Users</span> — Employee accounts, admin accounts, service accounts<br>
+├── <span class="branch">💻 Computers</span> — Domain-joined machines (COMPUTERNAME$)<br>
+├── <span class="branch">👥 Groups</span> — Security groups for permission management<br>
+├── <span class="branch">🖨️ Printers</span> — Shared network printers<br>
+├── <span class="branch">📜 Policies</span> — Group Policy Objects (GPOs)<br>
+└── <span class="branch">📁 Resources</span> — Shared folders, applications
+</div>
+</div>
+
+<div class="card-grid cols-3">
+<div class="card">
+<div class="icon-lg green">🔐</div>
+<h3>Central Authentication</h3>
+<p>Every login request goes to the Domain Controller. AD verifies credentials and grants or denies access.</p>
+</div>
+<div class="card">
+<div class="icon-lg blue">📋</div>
+<h3>Single Source of Truth</h3>
+<p>AD is the master identity database. All authentication decisions flow through it.</p>
+</div>
+<div class="card">
+<div class="icon-lg purple">🛡️</div>
+<h3>Policy Enforcement</h3>
+<p>Security policies, password rules, and configurations are enforced domain-wide through AD.</p>
+</div>
+</div>
+
+<div class="flow-diagram">
+<div class="flow-node">User tries to log in</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">Client machine sends request</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">Domain Controller checks AD</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">Access decision made</div>
+</div>
+</section>
+
+<!-- 05 DOMAIN CONTROLLER -->
+<section class="section" id="dc">
+<div class="section-label">Phase 1 — Core</div>
+<h2>Domain Controllers</h2>
+<p class="desc">The Domain Controller is the brain of the enterprise domain — the server that hosts Active Directory and makes every authentication decision.</p>
+
+<div class="info-box green">
+<strong>Mental Model:</strong> Active Directory = Central database. Domain Controller = Server that hosts and manages that database. This is not just a Windows machine — it's the brain of the enterprise domain.
+</div>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>Key Responsibilities</h3>
+<ul class="checklist" style="margin-top:12px">
+<li>Validate login credentials</li>
+<li>Control resource access</li>
+<li>Apply security policies</li>
+<li>Manage domain users & computers</li>
+<li>Host AD DS database</li>
+</ul>
+</div>
+<div class="card">
+<h3>Enterprise Reality</h3>
+<p style="margin-top:8px">In real companies, Domain Controllers are stored in secure server rooms or cloud environments. Administrators manage them remotely via RDP. Only authorized admins can access them.</p>
+</div>
+</div>
+
+<div class="flow-diagram">
+<div class="flow-node">User Login</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">Client Machine</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">Domain Controller</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">AD Verification</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">Access Decision</div>
+</div>
+</section>
+
+<!-- 06 AD OBJECTS -->
+<section class="section" id="objects">
+<div class="section-label">Phase 2</div>
+<h2>AD Objects</h2>
+<p class="desc">Active Directory stores everything as objects — users, computers, groups, service accounts, and more. Each object represents a real entity in the organization.</p>
+
+<div class="card-grid cols-3">
+<div class="obj-card" onclick="this.classList.toggle('expanded')">
+<div class="obj-icon">👤</div>
+<h4>User Objects</h4>
+<p>People or services that need domain access</p>
+<div class="obj-detail">Security principals that can be authenticated and assigned permissions. Includes employee accounts, admin accounts, and service accounts.</div>
+</div>
+<div class="obj-card" onclick="this.classList.toggle('expanded')">
+<div class="obj-icon">💻</div>
+<h4>Computer Objects</h4>
+<p>Machines joined to the domain</p>
+<div class="obj-detail">Every domain-joined computer gets a machine account ending with $. Example: TOM-PC becomes TOM-PC$. These are also security principals.</div>
+</div>
+<div class="obj-card" onclick="this.classList.toggle('expanded')">
+<div class="obj-icon">👥</div>
+<h4>Security Groups</h4>
+<p>Collective permission management</p>
+<div class="obj-detail">Assign permissions to groups instead of individual users. Members inherit permissions automatically. Improves manageability and scalability.</div>
+</div>
+<div class="obj-card" onclick="this.classList.toggle('expanded')">
+<div class="obj-icon">⚙️</div>
+<h4>Service Accounts</h4>
+<p>Application & service identities</p>
+<div class="obj-detail">Special accounts used by applications (IIS, databases, backups). Not for regular login. Have limited privileges for specific automated tasks.</div>
+</div>
+<div class="obj-card" onclick="this.classList.toggle('expanded')">
+<div class="obj-icon">🖨️</div>
+<h4>Printers</h4>
+<p>Shared network resources</p>
+<div class="obj-detail">Network printers published in AD so users can discover and connect to them through the directory.</div>
+</div>
+<div class="obj-card" onclick="this.classList.toggle('expanded')">
+<div class="obj-icon">📁</div>
+<h4>Shared Resources</h4>
+<p>Files, folders, applications</p>
+<div class="obj-detail">Shared folders and applications registered in AD for centralized access control and discovery.</div>
+</div>
+</div>
+
+<div class="info-box blue">
+<strong>Click any object card above</strong> to reveal detailed information about each AD object type and its role in the enterprise.
+</div>
+</section>
+
+<!-- 07 USERS & GROUPS -->
+<section class="section" id="users-groups">
+<div class="section-label">Phase 2</div>
+<h2>Users & Groups</h2>
+<p class="desc">Understanding security principals and how groups enable scalable permission management across the enterprise.</p>
+
+<div class="flow-diagram">
+<div class="flow-node">👤 Users</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">👥 Security Groups</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">🔐 Resource Permissions</div>
+</div>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>User Types</h3>
+<ul class="checklist" style="margin-top:12px">
+<li><strong>Employee accounts</strong> — Normal domain users</li>
+<li><strong>Admin accounts</strong> — Privileged users (Domain Admins)</li>
+<li><strong>Service accounts</strong> — Application/service identities</li>
+</ul>
+</div>
+<div class="card">
+<h3>Group-Based Permissions</h3>
+<p style="margin-top:8px">Instead of granting access to each user individually, add users to a group and assign permissions to the group. All members inherit those permissions automatically.</p>
+<div class="tree" style="margin-top:12px">
+<span class="branch">Group: HR-Team</span><br>
+<span class="leaf">&nbsp;&nbsp;Members: Alice, Bob, Charlie</span><br>
+<span class="leaf">&nbsp;&nbsp;Permission: HR Folder Access</span><br>
+<span class="leaf">&nbsp;&nbsp;→ All members gain access automatically</span>
+</div>
+</div>
+</div>
+
+<div class="key-concept">
+<div class="kc-icon" style="background:rgba(16,185,129,0.12);color:var(--primary)">🔑</div>
+<div class="kc-content">
+<h4>Security Principals</h4>
+<p>Users are called "security principals" because they can be authenticated, assigned permissions, and access domain resources. Computer accounts are also security principals.</p>
+</div>
+</div>
+</section>
+
+<!-- 08 OUs -->
+<section class="section" id="ous">
+<div class="section-label">Phase 3</div>
+<h2>Organizational Units</h2>
+<p class="desc">OUs are the backbone of enterprise AD organization — they group users by department and enable policy application at scale.</p>
+
+<div class="info-box green">
+<strong>Critical Concept:</strong> OUs are used to apply Group Policies to a specific set of users or computers. A user can belong to only ONE OU, but can belong to MULTIPLE groups.
+</div>
+
+<div class="diagram">
+<div class="diagram-title"><span class="dot"></span> OU Hierarchy — Enterprise Structure</div>
+<div class="tree">
+<span class="root">Company (THM.local)</span><br>
+├── <span class="branch">HR</span> — Human Resources department users<br>
+├── <span class="branch">IT</span> — IT staff and administrators<br>
+├── <span class="branch">Sales</span> — Sales team members<br>
+└── <span class="branch">Marketing</span> — Marketing department users
+</div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Feature</th><th>Organizational Unit (OU)</th><th>Security Group</th></tr></thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>Apply policies</td><td>Assign permissions</td></tr>
+<tr><td><strong>Membership</strong></td><td>User belongs to ONE OU</td><td>User belongs to MULTIPLE groups</td></tr>
+<tr><td><strong>Use Case</strong></td><td>Department structure</td><td>Resource access control</td></tr>
+<tr><td><strong>Example</strong></td><td>IT Department OU</td><td>IT-Shared-Folder-Access Group</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="info-box purple">
+<strong>Simple Mental Model:</strong> OU = "Where the user belongs" (organizational structure). Group = "What the user can access" (permission control).
+</div>
+</section>
+
+<!-- 09 ADUC -->
+<section class="section" id="aduc">
+<div class="section-label">Phase 3 — Practical</div>
+<h2>ADUC Exploration</h2>
+<p class="desc">Explore the Active Directory Users and Computers console — the primary graphical tool for managing AD objects.</p>
+
+<div class="info-box blue">
+<strong>Launch:</strong> Start Menu → Search "Active Directory Users and Computers" → Open. This console directly interacts with the AD DS database on the Domain Controller.
+</div>
+
+<div class="screenshot">
+<div class="icon">🖼️</div>
+<div class="label">Screenshot: ADUC Console — THM.local Domain Structure</div>
+</div>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>Default Containers</h3>
+<ul class="checklist" style="margin-top:12px">
+<li><strong>Builtin</strong> — Default built-in security groups (Administrators, Backup Operators)</li>
+<li><strong>Computers</strong> — Computer accounts when machines join the domain (COMPUTERNAME$)</li>
+<li><strong>Domain Controllers</strong> — Special OU for DC machines with critical policies</li>
+<li><strong>Users</strong> — Default domain users and groups (Administrator, Domain Admins)</li>
+<li><strong>Managed Service Accounts</strong> — Service account storage</li>
+</ul>
+</div>
+<div class="card">
+<h3>THM OU Hierarchy</h3>
+<p style="margin-top:8px">Expand THM → IT / Marketing / Sales / Management to see department-based OUs with their respective user objects.</p>
+<div class="tree" style="margin-top:12px">
+<span class="root">THM</span><br>
+├── <span class="branch">IT</span> → IT staff users<br>
+├── <span class="branch">Marketing</span> → Marketing users<br>
+├── <span class="branch">Sales</span> → Sales team users<br>
+└── <span class="branch">Management</span> → Management users
+</div>
+</div>
+</div>
+
+<div class="info-box yellow">
+<strong>THM Question:</strong> Suppose a company creates a new department. Which container should group users so policies apply consistently? <strong>Answer: Organizational Unit (OU)</strong>
+</div>
+</section>
+
+<!-- 10 DELEGATION -->
+<section class="section" id="delegation">
+<div class="section-label">Phase 5 — Critical</div>
+<h2>Delegation</h2>
+<p class="desc">Delegation allows limited administrative control without granting full Domain Admin rights — following the Principle of Least Privilege.</p>
+
+<div class="info-box green">
+<strong>THM Question:</strong> The process of granting privileges to a user over some OU or other AD Object is called… <strong>Answer: Delegation</strong>
+</div>
+
+<div class="flow-diagram">
+<div class="flow-node highlight">👑 Domain Admin</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">🔓 Delegated Rights</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">👤 Helpdesk User (Phillip)</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">📂 Specific OU Management</div>
+</div>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>Phillip — IT Support Scenario</h3>
+<p style="margin-top:8px"><strong style="color:var(--primary)">Can do:</strong></p>
+<ul class="checklist" style="margin-top:8px">
+<li>Reset passwords in Sales/Marketing/Management OUs</li>
+<li>Unlock locked user accounts</li>
+<li>Modify user attributes in delegated OUs</li>
+</ul>
+<p style="margin-top:12px"><strong style="color:var(--danger)">Cannot do:</strong></p>
+<ul style="list-style:none;padding:0;margin-top:8px">
+<li style="padding:4px 0;font-size:13px;opacity:.6">✗ Modify Domain Admin accounts</li>
+<li style="padding:4px 0;font-size:13px;opacity:.6">✗ Change domain-wide policies</li>
+<li style="padding:4px 0;font-size:13px;opacity:.6">✗ Manage Domain Controllers</li>
+</ul>
+</div>
+<div class="card">
+<h3>Principle of Least Privilege</h3>
+<p style="margin-top:8px">Users receive only the minimum permissions required. If Phillip's account is compromised, the attacker only gets limited OU-level control — not full domain compromise.</p>
+<div class="info-box red" style="margin-top:12px">
+<strong>Security Warning:</strong> Delegation misconfigurations can create privilege escalation paths. Over-delegated users become attack vectors.
+</div>
+</div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Role</th><th>Access Scope</th></tr></thead>
+<tbody>
+<tr><td><strong>Domain Admin</strong></td><td>Full domain control — everything</td></tr>
+<tr><td><strong>Delegated Support User</strong></td><td>Limited control on specific OUs only</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- 11 COMPUTER OBJECTS -->
+<section class="section" id="computers">
+<div class="section-label">Phase 6</div>
+<h2>Computer Objects</h2>
+<p class="desc">Machine accounts are automatically created when computers join the domain. They authenticate to the DC just like users do.</p>
+
+<div class="info-box green">
+<strong>THM Question:</strong> What would be the name of the machine account associated with TOM-PC? <strong>Answer: TOM-PC$</strong>
+</div>
+
+<div class="flow-diagram">
+<div class="flow-node">💻 Client Machine</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">🔑 Machine Account (COMPUTERNAME$)</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">🏢 Domain Controller</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">🔒 Secure Channel Established</div>
+</div>
+
+<div class="card-grid cols-3">
+<div class="card">
+<div class="icon-lg green">🔐</div>
+<h3>Machine Authentication</h3>
+<p>Computers authenticate using machine account passwords that are automatically rotated. This ensures a secure trust relationship.</p>
+</div>
+<div class="card">
+<div class="icon-lg blue">🔗</div>
+<h3>Secure Channel</h3>
+<p>Every domain-joined computer maintains a secure channel with the DC, similar to how users authenticate with passwords.</p>
+</div>
+<div class="card">
+<div class="icon-lg purple">🏷️</div>
+<h3>Naming Convention</h3>
+<p>Machine accounts always end with $. Example: Computer "TOM-PC" becomes "TOM-PC$" in Active Directory.</p>
+</div>
+</div>
+</section>
+
+<!-- 12 WORKSTATIONS VS SERVERS -->
+<section class="section" id="ws-servers">
+<div class="section-label">Phase 6</div>
+<h2>Workstations vs Servers</h2>
+<p class="desc">Enterprises separate computer objects into different OUs to apply different security policies based on machine role.</p>
+
+<div class="diagram">
+<div class="diagram-title"><span class="dot"></span> Computer Object Organization</div>
+<div class="tree">
+<span class="root">Computers</span><br>
+├── <span class="branch">Workstations OU</span> — Employee desktops & laptops<br>
+└── <span class="branch">Servers OU</span> — Critical infrastructure machines
+</div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Feature</th><th>Workstations</th><th>Servers</th></tr></thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>Employee PCs</td><td>Infrastructure Systems</td></tr>
+<tr><td><strong>Policy</strong></td><td>More flexible</td><td>Strict security policies</td></tr>
+<tr><td><strong>Usage</strong></td><td>End user daily work</td><td>Critical services (AD, IIS, DB)</td></tr>
+<tr><td><strong>Access</strong></td><td>Standard user access</td><td>Restricted access</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="info-box green">
+<strong>THM Question:</strong> Is it recommended to create separate OUs for Servers and Workstations? <strong>Answer: Yes</strong> — Different security requirements, different policy enforcement, easier administration.
+</div>
+
+<div class="info-box yellow">
+<strong>THM Task:</strong> After organizing the available computers, <strong>7</strong> ended up in the Workstations OU.
+</div>
+</section>
+
+<!-- 13 GPO -->
+<section class="section" id="gpo">
+<div class="section-label">Phase 7</div>
+<h2>Group Policy Basics</h2>
+<p class="desc">Group Policy (GPO) is the mechanism for centrally enforcing configuration settings across all domain users and computers.</p>
+
+<div class="flow-diagram">
+<div class="flow-node">👨‍💼 Administrator</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">📝 Creates GPO</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">📂 Stored in SYSVOL</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">💻 Clients Retrieve Policy</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">✅ Policy Applied</div>
+</div>
+
+<div class="card-grid cols-3">
+<div class="card">
+<div class="icon-lg green">🎯</div>
+<h3>Centralized Enforcement</h3>
+<p>Configure once on the domain → automatically applied across all machines. No manual per-machine configuration needed.</p>
+</div>
+<div class="card">
+<div class="icon-lg blue">🔧</div>
+<h3>Policy Types</h3>
+<p>Password complexity, software installation, desktop restrictions, security settings, and more.</p>
+</div>
+<div class="card">
+<div class="icon-lg purple">📡</div>
+<h3>Automatic Application</h3>
+<p>Policies apply when users log in or computers start. Consistent enforcement across the entire domain.</p>
+</div>
+</div>
+
+<div class="info-box blue">
+<strong>Enterprise Impact:</strong> Without GPO, an admin would need to configure 500 machines manually. With GPO, configure once and it applies everywhere automatically.
+</div>
+</section>
+
+<!-- 14 SYSVOL -->
+<section class="section" id="sysvol">
+<div class="section-label">Phase 7</div>
+<h2>SYSVOL Share</h2>
+<p class="desc">SYSVOL is the network share on the Domain Controller that stores and distributes Group Policy templates and logon scripts to all domain machines.</p>
+
+<div class="info-box green">
+<strong>THM Question:</strong> What is the name of the network share used to distribute GPOs to domain machines? <strong>Answer: SYSVOL</strong>
+</div>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>What SYSVOL Stores</h3>
+<ul class="checklist" style="margin-top:12px">
+<li>Group Policy templates</li>
+<li>Logon scripts</li>
+<li>Domain-wide configuration data</li>
+</ul>
+</div>
+<div class="card">
+<h3>Location</h3>
+<p style="margin-top:8px;font-family:'Courier New',monospace;font-size:13px;color:var(--heading)">\\DOMAIN\SYSVOL</p>
+<p style="margin-top:8px">All domain-joined machines download GPO settings from this shared folder on the Domain Controller.</p>
+</div>
+</div>
+
+<div class="flow-diagram">
+<div class="flow-node">Admin creates GPO</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">Stored in SYSVOL</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">Client logs in</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">Retrieves policy from SYSVOL</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">Settings applied</div>
+</div>
+</section>
+
+<!-- 15 KERBEROS -->
+<section class="section" id="kerberos">
+<div class="section-label">Phase 8 — Critical</div>
+<h2>Kerberos Authentication</h2>
+<p class="desc">Kerberos is the default authentication protocol in modern Windows domains — using tickets instead of sending passwords repeatedly.</p>
+
+<div class="info-box green">
+<strong>THM Question:</strong> When referring to Kerberos, what ticket allows requesting further tickets? <strong>Answer: Ticket Granting Ticket (TGT)</strong>
+</div>
+
+<div class="flow-diagram">
+<div class="flow-node">🔐 User Login</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">🎫 TGT Issued (Master Ticket)</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">🎟️ TGS Requested (Service Ticket)</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">✅ Service Access Granted</div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Ticket</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><strong>TGT</strong> (Ticket Granting Ticket)</td><td>Master authentication proof — "I am a valid domain user"</td></tr>
+<tr><td><strong>TGS</strong> (Ticket Granting Service)</td><td>Service-specific access ticket — "Allow me to access this specific service"</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card-grid cols-4">
+<div class="card">
+<div class="icon-lg green">1</div>
+<h3>Login Request</h3>
+<p>User sends username + encrypted timestamp to KDC on DC.</p>
+</div>
+<div class="card">
+<div class="icon-lg blue">2</div>
+<h3>TGT Issued</h3>
+<p>DC verifies credentials and returns TGT + Session Key.</p>
+</div>
+<div class="card">
+<div class="icon-lg purple">3</div>
+<h3>TGS Request</h3>
+<p>User presents TGT to request service-specific ticket.</p>
+</div>
+<div class="card">
+<div class="icon-lg yellow">4</div>
+<h3>Access Granted</h3>
+<p>Service validates TGS and grants resource access.</p>
+</div>
+</div>
+
+<div class="info-box blue">
+<strong>Key Security Feature:</strong> Passwords are not repeatedly sent across the network. The TGT acts as a "master pass" for requesting service tickets without re-authentication.
+</div>
+</section>
+
+<!-- 16 NETNTLM -->
+<section class="section" id="netntlm">
+<div class="section-label">Phase 8</div>
+<h2>NetNTLM Authentication</h2>
+<p class="desc">NetNTLM is the legacy challenge-response authentication protocol kept for backward compatibility in Windows domains.</p>
+
+<div class="info-box green">
+<strong>THM Question:</strong> When using NetNTLM, is the user's password transmitted over the network? <strong>Answer: Nay (No)</strong> — Only hashed challenge-response is exchanged.
+</div>
+
+<div class="flow-diagram">
+<div class="flow-node">💻 Client sends username</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">🎲 Server sends random challenge</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node highlight">🔑 Client encrypts challenge with password hash</div>
+<div class="flow-arrow">↓</div>
+<div class="flow-node">✅ DC verifies response</div>
+</div>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>How It Works</h3>
+<ol style="margin-top:12px;padding-left:20px;font-size:13px">
+<li style="margin-bottom:8px">Client sends username + domain name</li>
+<li style="margin-bottom:8px">Server sends a random challenge number</li>
+<li style="margin-bottom:8px">Client encrypts challenge using stored password hash</li>
+<li style="margin-bottom:8px">DC recomputes expected response and verifies</li>
+</ol>
+</div>
+<div class="card">
+<h3>Security Note</h3>
+<p style="margin-top:8px">Password is NEVER sent over the network. Only hashed challenge-response values are exchanged. However, NetNTLM is weaker than Kerberos and vulnerable to relay attacks.</p>
+</div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Feature</th><th>Kerberos</th><th>NetNTLM</th></tr></thead>
+<tbody>
+<tr><td>Default in AD</td><td>Yes</td><td>No (legacy fallback)</td></tr>
+<tr><td>Authentication Style</td><td>Ticket-based</td><td>Challenge-response</td></tr>
+<tr><td>Password Sent Over Network</td><td>No</td><td>No</td></tr>
+<tr><td>Security Level</td><td>Strong</td><td>Weaker (relay attacks possible)</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- 17 TREES & FORESTS -->
+<section class="section" id="trees">
+<div class="section-label">Phase 9</div>
+<h2>Trees & Forests</h2>
+<p class="desc">Understanding how Active Directory scales from a single domain to enterprise-wide identity infrastructure with multiple domains and namespaces.</p>
+
+<div class="diagram">
+<div class="diagram-title"><span class="dot"></span> AD Hierarchy — Forest, Trees, Domains</div>
+<div class="tree">
+<span class="root">🌳 Forest (Enterprise Identity Boundary)</span><br>
+├── <span class="branch">🌲 Tree 1: corp.local</span><br>
+│ &nbsp;&nbsp; ├── <span class="leaf">corp.local</span> (root domain)<br>
+│ &nbsp;&nbsp; ├── <span class="leaf">uk.corp.local</span> (child domain)<br>
+│ &nbsp;&nbsp; └── <span class="leaf">us.corp.local</span> (child domain)<br>
+└── <span class="branch">🌲 Tree 2: mht.local</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp; └── <span class="leaf">mht.local</span> (separate namespace)
+</div>
+</div>
+
+<div class="card-grid cols-3">
+<div class="card">
+<div class="icon-lg green">🏢</div>
+<h3>Domain</h3>
+<p>Basic security and administrative boundary. Contains users, computers, groups, and policies managed by a DC.</p>
+</div>
+<div class="card">
+<div class="icon-lg blue">🌲</div>
+<h3>Tree</h3>
+<p>Multiple domains sharing the same namespace. Example: corp.local, uk.corp.local, us.corp.local.</p>
+</div>
+<div class="card">
+<div class="icon-lg purple">🌳</div>
+<h3>Forest</h3>
+<p>Highest hierarchy level — collection of trees. The entire enterprise identity infrastructure.</p>
+</div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Role</th><th>Scope</th></tr></thead>
+<tbody>
+<tr><td><strong>Domain Admin</strong></td><td>Controls only one domain</td></tr>
+<tr><td><strong>Enterprise Admin</strong></td><td>Highest privilege — controls entire forest</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="info-box green">
+<strong>Mental Model:</strong> Domain = basic control unit. Tree = related domains under same namespace. Forest = entire enterprise identity boundary.
+</div>
+</section>
+
+<!-- 18 TRUSTS -->
+<section class="section" id="trusts">
+<div class="section-label">Phase 9</div>
+<h2>Trust Relationships</h2>
+<p class="desc">Trust relationships enable cross-domain authentication and resource access in multi-domain Active Directory environments.</p>
+
+<div class="card-grid cols-2">
+<div class="card">
+<h3>One-Way Trust</h3>
+<p style="margin-top:8px">If Domain A trusts Domain B, then users from B can access resources in A — but not vice versa.</p>
+<div class="trust-vis" style="margin-top:16px">
+<div class="trust-domain"><h4>Domain A</h4><p>Trusting domain</p></div>
+<div class="trust-arrow"><div class="line" style="background:var(--primary)"></div><div class="label">← trusts</div></div>
+<div class="trust-domain"><h4>Domain B</h4><p>Trusted domain</p></div>
+</div>
+</div>
+<div class="card">
+<h3>Two-Way Trust</h3>
+<p style="margin-top:8px">Both domains trust each other. Users from A can access B and vice versa. Default for domains in same tree/forest.</p>
+<div class="trust-vis" style="margin-top:16px">
+<div class="trust-domain"><h4>Domain A</h4><p>↔</p></div>
+<div class="trust-arrow"><div class="line" style="background:var(--secondary)"></div><div class="label">↔ mutual trust</div></div>
+<div class="trust-domain"><h4>Domain B</h4><p>↔</p></div>
+</div>
+</div>
+</div>
+
+<div class="info-box purple">
+<strong>Key Concept:</strong> Trust direction ≠ Access direction. If A trusts B, B users can access A resources (trust flows opposite to access).
+</div>
+</section>
+
+<!-- 19 ARCHITECTURE -->
+<section class="section" id="architecture">
+<div class="section-label">Phase 10</div>
+<h2>Integrated AD Architecture</h2>
+<p class="desc">The complete enterprise Active Directory ecosystem — from local users to forest-wide trust relationships.</p>
+
+<div class="recap-flow">
+<div class="recap-node">💻 Local Users (Standalone Systems)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">🌐 Windows Domain (Centralized Identity)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">📋 Active Directory Objects (Users, Computers, Groups)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">📂 OUs & Groups (Department Structure + Permissions)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">📜 Group Policy (Centralized Configuration Enforcement)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">🔐 Authentication (Kerberos / NetNTLM via DC)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">🌳 Forest & Trusts (Enterprise Scaling)</div>
+</div>
+
+<div class="info-box green" style="text-align:center;font-size:15px">
+<strong>Core Mental Model:</strong> Active Directory is the centralized brain of an enterprise network that manages identities, policies, authentication, and cross-domain access in a structured and scalable hierarchy.
+</div>
+</section>
+
+<!-- 20 WALKTHROUGH -->
+<section class="section" id="walkthrough">
+<div class="section-label">Practical</div>
+<h2>Lab Walkthrough</h2>
+<p class="desc">Step-by-step TryHackMe AD Basics room walkthrough with explanations, expected results, and verification checklists.</p>
+
+<div class="step-card" data-step="STEP 1">
+<h4>Open Remmina in Kali Linux</h4>
+<p>Launch Remmina from Applications → Internet, or run <code>remmina</code> in terminal. This is your remote desktop client for connecting to the Domain Controller.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: Remmina application launch</div></div>
+<div class="info-box green" style="margin-top:12px"><strong>Why it matters:</strong> Remmina is the standard tool for RDP connections from Linux to Windows servers.</div>
+</div>
+
+<div class="step-card" data-step="STEP 2">
+<h4>Configure RDP Connection Profile</h4>
+<p>Click "+" to create a new profile. Set Protocol to RDP, Server to THM lab IP, Username to Administrator, Password to Password321, Domain to THM.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: RDP profile configuration</div></div>
+<div class="info-box blue" style="margin-top:12px"><strong>Verification:</strong> All connection fields are correctly filled with THM lab credentials.</div>
+</div>
+
+<div class="step-card" data-step="STEP 3">
+<h4>Connect to Domain Controller</h4>
+<p>Click Connect. Accept any certificate warnings. You are now establishing a remote session with the THM.local Domain Controller.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: RDP login to Domain Controller</div></div>
+<div class="info-box green" style="margin-top:12px"><strong>Expected Result:</strong> Windows desktop of the Domain Controller appears. You have administrative access.</div>
+</div>
+
+<div class="step-card" data-step="STEP 4">
+<h4>Open ADUC Console</h4>
+<p>Start Menu → Search "Active Directory Users and Computers" → Open. This is the primary management interface for AD objects.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: ADUC console opened</div></div>
+</div>
+
+<div class="step-card" data-step="STEP 5">
+<h4>Explore Default Containers</h4>
+<p>Expand THM.local in the left pane. Observe Builtin, Computers, Domain Controllers, Users, and Managed Service Accounts containers.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: Default containers in ADUC</div></div>
+</div>
+
+<div class="step-card" data-step="STEP 6">
+<h4>Explore THM OU Hierarchy</h4>
+<p>Expand THM → IT / Marketing / Sales / Management. Observe department-based organizational units and their user objects.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: THM OU hierarchy with departments</div></div>
+</div>
+
+<div class="step-card" data-step="STEP 7">
+<h4>View Users & Groups</h4>
+<p>Click on each OU to see its users. Navigate to Users container to see Domain Admins, Domain Users, and other default groups.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: Users and Groups in ADUC</div></div>
+</div>
+
+<div class="step-card" data-step="STEP 8">
+<h4>Understand Delegation</h4>
+<p>Right-click an OU → Delegate Control. Understand how to grant limited administrative rights (password reset, account unlock) to specific users for specific OUs.</p>
+<div class="info-box yellow" style="margin-top:12px"><strong>Key Point:</strong> Delegation follows the Principle of Least Privilege — only grant what's needed.</div>
+</div>
+
+<div class="step-card" data-step="STEP 9">
+<h4>Move Computer Objects</h4>
+<p>Navigate to Computers container. Identify workstation machines. Right-click → Move → Select Workstations OU. Organize 7 workstations into the correct OU.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: Moving computer objects to Workstations OU</div></div>
+<div class="info-box green" style="margin-top:12px"><strong>Expected Result:</strong> 7 computers moved to Workstations OU.</div>
+</div>
+
+<div class="step-card" data-step="STEP 10">
+<h4>Understand GPO Distribution</h4>
+<p>Review how Group Policies are stored in SYSVOL and distributed to domain machines. Understand the GPO application lifecycle.</p>
+<div class="screenshot" style="margin-top:16px"><div class="icon">🖼️</div><div class="label">Screenshot: GPO structure and SYSVOL share</div></div>
+</div>
+
+<div class="step-card" data-step="STEP 11">
+<h4>Analyze Authentication Flow</h4>
+<p>Review Kerberos and NetNTLM authentication flows. Understand TGT/TGS tickets and challenge-response mechanisms.</p>
+<div class="info-box blue" style="margin-top:12px"><strong>Verification:</strong> You can explain the complete authentication flow from user login to resource access.</div>
+</div>
+</section>
+
+<!-- 21 ASSESSMENT -->
+<section class="section" id="assessment">
+<div class="section-label">Practice</div>
+<h2>Assessment</h2>
+<p class="desc">Test your understanding of Active Directory fundamentals with these interactive questions.</p>
+
+<div class="quiz-card" id="q1">
+<div class="q-num">Question 1</div>
+<div class="question">The core service holding information about objects in the network is called?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q1')">DNS Server</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q1')">Active Directory Domain Services (AD DS)</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q1')">Group Policy Management</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q1')">DHCP Service</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q1','Active Directory Domain Services (AD DS)')">Check Answer</button>
+<div class="quiz-answer" id="q1-answer">Correct! AD DS is the core service that stores and manages all directory objects in a Windows domain.</div>
+</div>
+
+<div class="quiz-card" id="q2">
+<div class="q-num">Question 2</div>
+<div class="question">Why are Organizational Units (OUs) important in Active Directory?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q2')">They store user passwords</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q2')">They organize objects and allow Group Policy application</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q2')">They replace security groups</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q2')">They manage network traffic</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q2','They organize objects and allow Group Policy application')">Check Answer</button>
+<div class="quiz-answer" id="q2-answer">Correct! OUs organize objects logically (by department) and are the containers to which Group Policies are applied.</div>
+</div>
+
+<div class="quiz-card" id="q3">
+<div class="q-num">Question 3</div>
+<div class="question">What is the name of the network share used to distribute GPOs to domain machines?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q3')">NETLOGON</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q3')">SYSVOL</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q3')">SHARED</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q3')">POLICIES</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q3','SYSVOL')">Check Answer</button>
+<div class="quiz-answer" id="q3-answer">Correct! SYSVOL is the shared folder on the Domain Controller that stores Group Policy templates and distributes them to all domain machines.</div>
+</div>
+
+<div class="quiz-card" id="q4">
+<div class="q-num">Question 4</div>
+<div class="question">What does a Domain Controller do?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q4')">Manages network printers only</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q4')">Hosts AD DS, authenticates users, enforces policies</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q4')">Runs web applications</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q4')">Manages email servers</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q4','Hosts AD DS, authenticates users, enforces policies')">Check Answer</button>
+<div class="quiz-answer" id="q4-answer">Correct! The Domain Controller hosts Active Directory services, authenticates users and computers, and enforces domain-wide security policies.</div>
+</div>
+
+<div class="quiz-card" id="q5">
+<div class="q-num">Question 5</div>
+<div class="question">Why are Security Groups used in Active Directory?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q5')">To apply Group Policies</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q5')">To assign permissions collectively to multiple users</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q5')">To store computer accounts</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q5')">To manage DNS records</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q5','To assign permissions collectively to multiple users')">Check Answer</button>
+<div class="quiz-answer" id="q5-answer">Correct! Security groups allow administrators to assign permissions to a group rather than individual users, improving manageability and scalability.</div>
+</div>
+
+<div class="quiz-card" id="q6">
+<div class="q-num">Question 6</div>
+<div class="question">What is a TGT in Kerberos authentication?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q6')">A service-specific access ticket</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q6')">Ticket Granting Ticket — master authentication proof</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q6')">A password hash</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q6')">A network protocol</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q6','Ticket Granting Ticket — master authentication proof')">Check Answer</button>
+<div class="quiz-answer" id="q6-answer">Correct! The TGT (Ticket Granting Ticket) is the master authentication proof issued by the DC after successful login. It allows the user to request service-specific TGS tickets.</div>
+</div>
+
+<div class="quiz-card" id="q7">
+<div class="q-num">Question 7</div>
+<div class="question">What is the purpose of delegation in Active Directory?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q7')">To give full Domain Admin rights to everyone</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q7')">To grant specific administrative privileges to users over specific OUs</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q7')">To delete user accounts</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q7')">To manage DNS settings</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q7','To grant specific administrative privileges to users over specific OUs')">Check Answer</button>
+<div class="quiz-answer" id="q7-answer">Correct! Delegation allows granting specific administrative tasks (like password reset) to users over specific OUs without giving full Domain Admin rights, following the Principle of Least Privilege.</div>
+</div>
+
+<div class="quiz-card" id="q8">
+<div class="q-num">Question 8</div>
+<div class="question">When using NetNTLM, is the user's password transmitted over the network?</div>
+<div class="quiz-options">
+<div class="quiz-opt" onclick="selectOpt(this,'q8')">Yes, always</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q8')">Nay (No) — only hashed challenge-response is exchanged</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q8')">Only on Tuesdays</div>
+<div class="quiz-opt" onclick="selectOpt(this,'q8')">Only for admin accounts</div>
+</div>
+<button class="quiz-btn" onclick="checkAnswer('q8','Nay (No) — only hashed challenge-response is exchanged')">Check Answer</button>
+<div class="quiz-answer" id="q8-answer">Correct! NetNTLM uses a challenge-response mechanism. The password is never sent over the network — only a hashed response to a random challenge is exchanged.</div>
+</div>
+
+<div class="score-display" id="scoreDisplay" style="display:none">
+<div class="score" id="scoreValue">0/8</div>
+<div class="score-label">Questions Answered Correctly</div>
+</div>
+</section>
+
+<!-- 22 RECAP -->
+<section class="section" id="recap">
+<div class="section-label">Summary</div>
+<h2>Final Recap</h2>
+<p class="desc">The complete Active Directory learning journey — from local user management to enterprise-scale identity infrastructure.</p>
+
+<div class="recap-flow">
+<div class="recap-node">🔐 Centralized Identity</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">📋 AD Objects (Users, Computers, Groups)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">📂 OUs & Groups (Structure + Permissions)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">📜 Policy Enforcement (GPO via SYSVOL)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">🔑 Authentication (Kerberos / NetNTLM)</div>
+<div class="recap-arrow">↓</div>
+<div class="recap-node">🌳 Enterprise Scaling (Forests & Trusts)</div>
+</div>
+
+<div class="card-grid cols-3" style="margin-top:32px">
+<div class="card">
+<div class="icon-lg green">🏢</div>
+<h3>Domain Controller</h3>
+<p>The brain of the enterprise domain — hosts AD DS and makes every authentication decision.</p>
+</div>
+<div class="card">
+<div class="icon-lg blue">📋</div>
+<h3>Active Directory</h3>
+<p>The central identity database storing all users, computers, groups, and policies.</p>
+</div>
+<div class="card">
+<div class="icon-lg purple">🔐</div>
+<h3>Kerberos</h3>
+<p>Ticket-based authentication using TGT and TGS — secure, default protocol in modern AD.</p>
+</div>
+<div class="card">
+<div class="icon-lg yellow">📂</div>
+<h3>OUs</h3>
+<p>Organizational units structure the enterprise and enable department-level policy application.</p>
+</div>
+<div class="card">
+<div class="icon-lg green">👥</div>
+<h3>Delegation</h3>
+<p>Controlled administrative privilege assignment following the Principle of Least Privilege.</p>
+</div>
+<div class="card">
+<div class="icon-lg red">🌳</div>
+<h3>Forests & Trusts</h3>
+<p>Enterprise-scale identity infrastructure with cross-domain authentication capabilities.</p>
+</div>
+</div>
+
+<div class="info-box green" style="text-align:center;margin-top:32px;font-size:15px">
+<strong>🎯 You now understand the foundations of Active Directory.</strong><br>
+This knowledge prepares you for advanced topics: AD pentesting, Kerberos attacks, privilege escalation, and enterprise security assessments.
+</div>
+</section>
+
+</main>
+
+<script>
+// Sidebar navigation
+document.querySelectorAll('.nav-item').forEach(item=>{
+item.addEventListener('click',function(){
+const target=document.getElementById(this.dataset.target);
+if(target){target.scrollIntoView({behavior:'smooth',block:'start'})}
+document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+this.classList.add('active');
+document.querySelector('.sidebar').classList.remove('open');
+});
+});
+
+// Scroll spy
+const sections=document.querySelectorAll('.section, .hero');
+const navItems=document.querySelectorAll('.nav-item');
+const progressFill=document.getElementById('progressFill');
+
+function updateProgress(){
+const scrollTop=window.scrollY;
+const docHeight=document.documentElement.scrollHeight-window.innerHeight;
+const progress=(scrollTop/docHeight)*100;
+progressFill.style.width=progress+'%';
+
+let current='';
+sections.forEach(section=>{
+const top=section.offsetTop-100;
+if(scrollTop>=top)current=section.id;
+});
+
+navItems.forEach(item=>{
+item.classList.remove('active');
+if(item.dataset.target===current)item.classList.add('active');
+});
+}
+
+window.addEventListener('scroll',updateProgress);
+updateProgress();
+
+// Accordion
+function toggleAccordion(header){
+const item=header.parentElement;
+const wasOpen=item.classList.contains('open');
+item.parentElement.querySelectorAll('.accordion-item').forEach(i=>i.classList.remove('open'));
+if(!wasOpen)item.classList.add('open');
+}
+
+// Quiz
+let score=0;
+let answered=0;
+const totalQuestions=8;
+
+function selectOpt(opt,qid){
+const card=document.getElementById(qid);
+if(card.classList.contains('answered'))return;
+card.querySelectorAll('.quiz-opt').forEach(o=>o.classList.remove('selected'));
+opt.classList.add('selected');
+}
+
+function checkAnswer(qid,correct){
+const card=document.getElementById(qid);
+if(card.classList.contains('answered'))return;
+card.classList.add('answered');
+const selected=card.querySelector('.quiz-opt.selected');
+if(!selected)return;
+
+answered++;
+const answerDiv=document.getElementById(qid+'-answer');
+answerDiv.classList.add('show');
+
+card.querySelectorAll('.quiz-opt').forEach(opt=>{
+if(opt.textContent===correct){
+opt.classList.add('correct');
+}
+});
+
+if(selected.textContent===correct){
+score++;
+}else{
+selected.classList.add('wrong');
+}
+
+if(answered===totalQuestions){
+const sd=document.getElementById('scoreDisplay');
+sd.style.display='block';
+document.getElementById('scoreValue').textContent=score+'/'+totalQuestions;
+}
+}
+
+// Intersection observer for animations
+const observer=new IntersectionObserver((entries)=>{
+entries.forEach(entry=>{
+if(entry.isIntersecting){
+entry.target.classList.add('animate-in');
+}
+});
+},{threshold:0.1});
+
+document.querySelectorAll('.card,.step-card,.quiz-card,.obj-card,.diagram,.info-box').forEach(el=>{
+observer.observe(el);
+});
+</script>
+</body>
+</html>
